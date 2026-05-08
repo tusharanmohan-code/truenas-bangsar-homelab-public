@@ -2,15 +2,15 @@
 
 ## Storage Architecture Overview
 
-The TrueNAS homelab uses ZFS with a single storage pool named:
+The TrueNAS Bangsar homelab uses ZFS with a single storage pool named:
 
 pool
 
-The pool is configured as a striped vdev (RAID 0 equivalent) across two 500GB HGST HDDs, providing approximately 1TB of usable capacity.
+The pool is configured as a striped vdev (RAID 0 equivalent) across two 1TB NVMe M.2 SSDs, providing approximately 2TB of usable capacity.
 
 This configuration prioritizes performance and capacity over redundancy.
 
-Current System Version: v1.2.0
+Current System Version: v2.0.0
 
 ---
 
@@ -22,11 +22,14 @@ pool
 ### Configuration
 Striped vdev (RAID 0 equivalent)
 
+### Drive Type
+2 × 1TB NVMe M.2 SSD
+
 ### Total Usable Capacity
-~1TB
+~2TB
 
 ### Current Usage
-~783 GB used
+TBD
 
 ### Encryption
 Unencrypted
@@ -35,7 +38,7 @@ Unencrypted
 
 ## 2. Dataset Structure
 
-The dataset layout is structured to logically separate media, applications, and system configuration.
+The dataset layout is structured to logically separate media, applications, automation, and system configuration.
 
 ### Root Level
 
@@ -81,7 +84,7 @@ pool/LMApps
 │   └── Config
 ├── Plex_Config
 ├── Rustdesk
-├── Rustdesk_Relay
+├── Rustdesk Relay
 ├── Tailscale
 │   └── Data
 ├── Jackett
@@ -92,6 +95,7 @@ pool/LMApps
 
 - Isolates app configuration from media datasets
 - Enables easier migration or recreation of services
+- Supports automation stack (Jackett + Transmission + FlareSolverr)
 - Allows selective snapshotting if needed
 
 ---
@@ -111,14 +115,15 @@ Reserved for future application expansion, staging, or migration testing.
 
 ## 6. Design Rationale
 
-| Decision                        | Reason                                               |
-|---------------------------------|------------------------------------------------------|
-| Separate LM and LMApps          | Clean separation of media vs application state       |
-| Dedicated Immich DB datasets    | Allows safe DB migration and rollback                |
-| Preserve old DB (db)            | Enables recovery or forensic debugging               |
-| Introduced db_new               | Clean upgrade path for Postgres version change       |
-| Script storage inside pool      | Centralized automation management                    |
-| Dedicated RustDesk Relay dataset| Isolates relay service from main RustDesk config     |
+| Decision | Reason |
+|----------|--------|
+| Separate LM and LMApps | Clean separation of media vs application state |
+| Dedicated Immich DB datasets | Allows safe DB migration and rollback |
+| Preserve old DB (db) | Enables recovery or forensic debugging |
+| Introduced db_new | Clean upgrade path for Postgres version change |
+| Added automation datasets | Supports scalable workflow architecture |
+| Script storage inside pool | Centralized automation management |
+| Dedicated RustDesk Relay dataset | Isolates relay service from main RustDesk config |
 
 This structure improves clarity, maintainability, and migration flexibility.
 
@@ -126,12 +131,12 @@ This structure improves clarity, maintainability, and migration flexibility.
 
 ## 7. RAID 0 Characteristics
 
-| Property             | Behavior                          |
-|----------------------|-----------------------------------|
-| Redundancy           | None                              |
-| Performance          | Improved sequential throughput    |
-| Capacity Efficiency  | 100% usable                       |
-| Failure Tolerance    | 0 disk failures                   |
+| Property | Behavior |
+|----------|----------|
+| Redundancy | None |
+| Performance | High sequential throughput (NVMe, 3,000–7,000 MB/s per drive) |
+| Capacity Efficiency | 100% usable |
+| Failure Tolerance | 0 disk failures |
 
 If either disk fails, the entire pool becomes unreadable.
 
@@ -155,9 +160,11 @@ This storage implementation demonstrates:
 
 - Practical ZFS dataset organization
 - Separation of media and application state
-- Safe migration strategy (db > db_new)
-- Understanding of RAID tradeoffs
+- Safe migration strategy (db → db_new)
+- Understanding of RAID tradeoffs with deliberate upgrade to NVMe for speed and silence
+- Automation-aware storage planning
 - Structured hierarchical dataset design
+- Successful pool migration preserving dataset hierarchy across hardware generation
 
 The configuration reflects intentional architecture with increasing operational maturity.
 
