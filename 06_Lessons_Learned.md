@@ -1,6 +1,6 @@
 # 06_Lessons_Learned.md
 
-## Lessons Learned – TrueNAS Bangsar (v1.0.0 – v2.1.0)
+## Lessons Learned – TrueNAS Bangsar (v1.0.0 – v2.1.1)
 
 This document captures key technical insights gained during the design, deployment, operation, and hardware migration of the TrueNAS Bangsar homelab.
 
@@ -266,6 +266,17 @@ Google Takeout is a moving target. Verify sidecar filename format before running
 
 ---
 
+# 17. SMB Slow Transfer Speed — Check the Physical Layer First
+
+SMB file transfers were dramatically slower than expected — sustained speeds consistent with a 100 Mbps Fast Ethernet link rather than the expected Gigabit throughput. The NAS, switch, and router all reported Gigabit-capable interfaces. TrueNAS SCALE showed no errors or misconfigurations. SMB settings, network interface parameters, and TrueNAS tuning were all investigated before the root cause was identified.
+
+The network cable in use was Cat 5. Cat 5 is rated to 100 Mbps and is physically indistinguishable from Cat 5e or Cat 6. It uses the same RJ45 connectors and the same outer jacket appearance. There is no visible way to identify it without reading the printing on the cable sheath. Replacing the Cat 5 cable with a Cat 5e cable immediately restored full Gigabit transfer speeds.
+
+Lesson:
+When SMB or any network transfer is unexpectedly slow, verify the physical layer before investigating software or configuration. Read the text printed on the cable sheath and confirm it is Cat 5e or Cat 6. Cat 5 is limited to 100 Mbps and looks identical to Gigabit-capable cable. No amount of SMB tuning will overcome a cable that cannot carry Gigabit.
+
+---
+
 # Final Reflection
 
 TrueNAS Bangsar has evolved from an initial single-machine NAS experiment into a platform that has been stress-tested by a real multi-failure hardware migration.
@@ -277,6 +288,8 @@ The v2.0.0 migration delivered those lessons in full. Used drives failed. A RAID
 v2.0.0 running on the MSI GE66 Raider with NVMe storage represents a meaningfully more capable and better-understood platform — earned through the experience of recovering from each failure along the way.
 
 v2.1.0 added the Google Photos migration to Immich, completing the transition away from cloud-dependent photo storage. The migration surfaced new lessons around metadata tooling, CLI authentication, and import sequencing — each added to this document as a record of what was learned in practice rather than theory.
+
+v2.1.1 added a physical-layer lesson: a Cat 5 cable masquerading as Gigabit-capable wiring was the sole cause of dramatically slow SMB transfers. A reminder that no configuration change fixes a cable limitation.
 
 ---
 
