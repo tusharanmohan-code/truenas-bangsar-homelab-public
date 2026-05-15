@@ -6,7 +6,7 @@ The TrueNAS homelab runs multiple self-hosted services to provide media streamin
 
 Applications are deployed via TrueNAS SCALE Apps (containerized workloads) with persistent storage mapped to dedicated ZFS datasets.
 
-Current System Version: v1.2.0
+Current System Version: v2.1.0
 
 ---
 
@@ -51,13 +51,24 @@ Shared from pool/LM
 ## 3. Immich
 
 ### Purpose
-Self-hosted photo backup and management platform.
+Self-hosted photo backup and management platform, replacing Google Photos.
 
 ### Datasets
 pool/LM/Immich
 pool/LMApps/Immich/db (legacy - Postgres 14)
 pool/LMApps/Immich/db_new (Postgres 18 - active)
 pool/LMApps/Immich/uploads
+
+### Mobile Backup
+- Android phone configured for automatic backup via Immich mobile app
+- App uploads direct to NAS over local network; Tailscale used when remote
+
+### Google Photos Migration
+- Migration completed May 2026
+- Source: Google Takeout export
+- Import method: Immich CLI with sidecar metadata handling
+- Albums recreated from Google Takeout folder structure using `--album` flag
+- Import order: phone app backup first, then Takeout CLI upload
 
 ### Incident
 - Original deployment used PostgreSQL v14
@@ -75,6 +86,7 @@ pool/LMApps/Immich/uploads
 - Media uploads dataset remained unchanged
 - Metadata tied to old database not automatically migrated
 - Highlights importance of database backup before upgrades
+- See 06_Lessons_Learned.md §16 for detailed Google Photos migration notes
 
 ---
 

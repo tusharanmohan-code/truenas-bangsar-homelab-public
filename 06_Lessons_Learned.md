@@ -1,6 +1,6 @@
 # 06_Lessons_Learned.md
 
-## Lessons Learned – TrueNAS Bangsar (v1.0.0 – v2.0.0)
+## Lessons Learned – TrueNAS Bangsar (v1.0.0 – v2.1.0)
 
 This document captures key technical insights gained during the design, deployment, operation, and hardware migration of the TrueNAS Bangsar homelab.
 
@@ -214,6 +214,58 @@ Separate platform upgrades from data migrations wherever possible. Migrate data 
 
 ---
 
+# 16. Google Photos to Immich Migration — Metadata and CLI Gotchas
+
+Migrating a Google Photos library to Immich via Google Takeout introduced several non-obvious failure modes that are not well-documented, and some that reflect recent changes to Google's export format and the Immich CLI.
+
+### Google Takeout Sidecar Filename Format Changed
+
+Google Takeout exports metadata as `.supplemental-metadata.json` sidecar files, not `.json` as older guides and community posts suggest. This format change is not prominently documented. Running exiftool without accounting for this pattern caused it to silently skip a large number of photos — they imported with wrong timestamps (defaulting to the file system modification date) rather than the original photo date.
+
+Correct exiftool command to apply dates from supplemental metadata sidecars:
+
+```
+exiftool -r -d "%s" -tagsfromfile "%d/%f.%e.supplemental-metadata.json" "-DateTimeOriginal<PhotoTakenTimeTimestamp" "-FileModifyDate<PhotoTakenTimeTimestamp" -ext jpg -ext jpeg -ext png -ext mp4 -ext mov -overwrite_original "/path/to/Takeout/Google Photos/"
+```
+
+For files that have no sidecar at all, fall back to extracting the date from the filename:
+
+```
+exiftool -r -if 'not $DateTimeOriginal' "-DateTimeOriginal<filename" -overwrite_original "/path/to/Takeout/Google Photos/"
+```
+
+### Immich CLI Authentication Uses API Keys, Not Credentials
+
+The Immich CLI `login` command does not accept an email and password. Authentication requires an API key generated from within the Immich web interface: Account Settings → API Keys. The login command is then:
+
+```
+immich login <server-url> <api-key>
+```
+
+### The `--google-photos` Flag Was Removed
+
+Older versions of the Immich CLI had a `--google-photos` flag to handle Takeout sidecar metadata. This flag was removed in newer releases. The current upload command handles sidecar metadata automatically — no flag is needed. Passing the old flag will cause the command to fail.
+
+### Album Recreation
+
+The `--album` flag recreates Google Photos albums based on the folder structure of the Takeout export. Each subfolder becomes an album. This is the correct approach for preserving album organisation without manual work.
+
+### Do Not Stop a CLI Upload Partway Through
+
+Interrupting a Takeout upload mid-run leaves partially-imported assets in Immich with incorrect dates or missing metadata — because sidecar association happens during the import pass. Cleaning up partial imports is significantly more time-consuming than the original upload. Run the full upload in a screen or tmux session and let it complete.
+
+### Recommended Import Order
+
+1. Phone backup via Immich mobile app (establishes the baseline library)
+2. Google Takeout via Immich CLI (adds historical library on top)
+
+Reversing this order risks duplicate detection conflicts where Takeout versions overwrite or conflict with already-imported phone originals.
+
+Lesson:
+Google Takeout is a moving target. Verify sidecar filename format before running any metadata tools. Authenticate the Immich CLI with an API key. Do not interrupt bulk imports. Run exiftool on the export before uploading — fixing timestamps after import is harder than fixing them before.
+
+---
+
 # Final Reflection
 
 TrueNAS Bangsar has evolved from an initial single-machine NAS experiment into a platform that has been stress-tested by a real multi-failure hardware migration.
@@ -223,6 +275,8 @@ v1.0.0 established the architectural foundations: ZFS dataset structure, service
 The v2.0.0 migration delivered those lessons in full. Used drives failed. A RAID 0 pool was destroyed. rsync halted on a dying drive mid-transfer. Each failure was contained because the groundwork from v1.0.0 was in place: cloud sync was already running, datasets were cleanly separated, and documentation made the recovery path clear.
 
 v2.0.0 running on the MSI GE66 Raider with NVMe storage represents a meaningfully more capable and better-understood platform — earned through the experience of recovering from each failure along the way.
+
+v2.1.0 added the Google Photos migration to Immich, completing the transition away from cloud-dependent photo storage. The migration surfaced new lessons around metadata tooling, CLI authentication, and import sequencing — each added to this document as a record of what was learned in practice rather than theory.
 
 ---
 
